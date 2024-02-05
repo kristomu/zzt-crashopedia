@@ -24,51 +24,50 @@ void write(std::ofstream & outfile, std::vector<char> bytes) {
 	outfile.write(bytes.data(), bytes.size());
 }
 
-class ZZTBoard {
-	public:
-		// Required if it's too short for a name. The length does not
-		// count itself.
-		short length;
-
-		// Required in case the board is truncated.
-		unsigned char name_length;
-
-		std::string name;
-		std::vector<char> data;
-
-		ZZTBoard() {
-			length = 0;
-			name_length = 0;
-		}
-};
-
 // Assumes that the seek pointer is just before the board data.
-ZZTBoard read_ZZT_board(std::ifstream & infile) {
+std::vector<char> read_ZZT_board(std::ifstream & infile) {
 	// First read two bytes to get the board size. Throw an exception
 	// if the size is out of bounds. Then read the remaining bytes.
 	// WARNING: This is not endian safe! I'll fix it later if needed.
-	ZZTBoard board;
-	infile.read((char *)&board.length, 2);
+	short board_length = 0;
+	char * length_ptr = (char *)&board_length;
+	infile.read(length_ptr, 2);
 
-	if (board.length < 0 || board.length > 20000) {
+	if (!infile) {
+		return {};
+	}
+
+	if (board_length < 0 || board_length > 20000) {
 		throw std::runtime_error("Invalid board length!");
 	}
 
-	if (board.length == 0) { return board; } // all done
+	std::vector<char> board(2);
+	std::copy(length_ptr, length_ptr + 2, board.begin());
 
-	infile.read((char *)&board.name_length, 1);
+	if (board_length == 0) {
+		return board;    // all done
+	}
 
-	// Read the name.
-	int real_length = std::min((int)board.name_length,
-		(int)board.length-1);
-	board.name.resize(real_length);
+	board.resize(board_length + 2);
+	infile.read(board.data() + 2, board_length);
 
-	infile.read((char *)board.name.data(), real_length);
-
-	// Read everything else.
-	board.data = read(infile, board.length - real_length);
+	if (!infile) {
+		board.resize(2 + infile.gcount());
+	}
 
 	return board;
+}
+
+std::string get_board_name(std::vector<char> & board) {
+	if (board.size() < 2) {
+		return "";
+	}
+
+	int name_length = (unsigned char)board[2];
+
+	std::string name(board.begin() + 3, board.begin() + 3 + name_length);
+
+	return name;
 }
 
 int main() {
@@ -78,7 +77,7 @@ int main() {
 	std::string output_file = "output.zzt";
 
 	// Number of bytes from start till the first board.
-	const int HEADER_SIZE = 265;
+	const int HEADER_SIZE = 512;
 
 	std::ifstream infile(input_file.c_str());
 
@@ -87,12 +86,12 @@ int main() {
 	// Deal with the header.
 	std::vector<char> header = read(infile, HEADER_SIZE);
 
-	// TODO: Lots of times, do this. Remember to check for EOF and
-	// the like.
-	ZZTBoard infile_board = read_ZZT_board(infile);
-	ZZTBoard output_board = infile_board;
-	// if name is of the right type then...
-	// 		std::string pathname = board_directory + filename extracted from board name
-	//		output_board = read_ZZT_board(pathname);
-	// output_board.write_ZZT_board(output_board);
+	while (infile) {
+		std::vector<char> board = read_ZZT_board(infile);
+		if (!infile && board.empty()) {
+			continue;
+		}
+		std::cout << "That board's name is\t" <<
+			get_board_name(board) << std::endl;
+	}
 }
