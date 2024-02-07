@@ -10,7 +10,7 @@
 // board is corrupted to provoke bugs in ZZT. Such boards naturally can't
 // be generated in-place by KevEdit and must be inserted by other means.
 
-// Placeholder boards have a board title of "PLACEHOLDER: " followed by
+// Placeholder boards have a board title of "!REPLACE! " followed by
 // the board filename.
 
 // Currently this is just a prototype. Beware ugly code.
@@ -87,11 +87,20 @@ std::string get_board_name(std::vector<char> & board) {
 	return name;
 }
 
-int main() {
-	std::string input_path = "test/testworld.zzt";
-	std::string board_directory = "test/boards/";
+int main(int argc, char * argv[]) {
+	if (argc <= 3) {
+		std::cout << "Usage: " << argv[0]
+			<< " [input path] [board directory] [output path]\n";
+		std::cout << "E.g. " << argv[0]
+			<< " worlds/ZZTCRASH.ZZT boards/corrupt/ ZZTCRASH.ZZT\n";
+		return -1;
+	}
 
-	std::string output_path = "test/output.zzt";
+	std::vector<std::string> parameters(argv+1, argv+argc);
+	std::string input_path = parameters[0];
+	std::string board_directory = parameters[1];
+
+	std::string output_path = parameters[2];
 
 	// Number of bytes from start till the first board.
 	const int HEADER_SIZE = 512;
@@ -107,7 +116,7 @@ int main() {
 	// If the title shows the board to be a placeholder, read
 	// the .brd file in question and replace the contents
 	// to be written to the output file with it.
-	
+
 	while (infile) {
 		std::vector<char> board = read_ZZT_board(infile);
 		if (!infile && board.empty()) {
@@ -118,7 +127,7 @@ int main() {
 		std::cout << "That board's name is\t" <<
 			board_name << std::endl;
 
-		std::string placeholder_str = "PLACEHOLDER: ";
+		std::string placeholder_str = "!REPLACE! ";
 		size_t placeholder_idx = board_name.find(placeholder_str);
 
 		if (placeholder_idx != std::string::npos) {
