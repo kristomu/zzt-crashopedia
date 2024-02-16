@@ -9,8 +9,10 @@ ZZT Crashopedia.
 
 	Allocates and deallocates lots of memory (2 MB) from repeatedly
 	entering the board it exited. Crashes DOS ZZT with a heap overflow.
+	The behavior seems to be due to board corruption. I need to find out
+	why later.
 
-- CR2.ZZT, CR3.ZZT, CR4.ZZT
+- CR3.ZZT, CR4.ZZT
 
 	Garbled metadata or too small a board size - find out which later.
 
